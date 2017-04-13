@@ -123,10 +123,10 @@ public class SubscriberHandler extends Thread {
 		int counter=0;
 		String splitter [];
 		try {
-			File folder = new File(".");
+			File folder = Main.parentFolder;
             //FileWriter writer = new FileWriter(folder+"/Subscribtion_Records.txt",true);
-			File f = new File (folder+"/Subscribtion_Records.txt");
-			fr = new FileReader(folder+"/Subscribtion_Records.txt");
+			File f = new File (folder+Main.subscriptionObjectPath);
+			fr = new FileReader(folder+Main.subscriptionObjectPath);
 			br = new BufferedReader(fr);
 			resultArray= new String[(int)f.length()];
 			String sCurrentLine;

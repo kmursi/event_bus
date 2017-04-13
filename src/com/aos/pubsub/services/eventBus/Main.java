@@ -1,5 +1,6 @@
 //tests
 package com.aos.pubsub.services.eventBus;
+import java.io.File;
 //------------
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -11,13 +12,18 @@ import java.util.concurrent.ThreadPoolExecutor;
 public class Main extends Thread{
 
     int port;
-    
+    static final File f = new File(Main.class.getProtectionDomain().getCodeSource().getLocation().getPath()); //get the jar directory
+    static File temp = new File(f.getParent());
+    static File parentFolder = new File(temp.getParent());
+    static String topicObjectPath="/Topic_Log.txt";
+    static String messageObjectPath="/message_Log.txt";
+    static String subscriptionObjectPath="/Subscribtion_Records.txt";
     static ThreadPoolExecutor executor;
     Main(int port)                                      //Main constructor that receive port number
     {
         this.port = port;
     }
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
     	
     	System.out.println("=======================================================\n");
         System.out.println("Preparing Event Bus server..........\n");
@@ -25,6 +31,11 @@ public class Main extends Thread{
        
         System.out.println("Event Bus is up and running..........\n");
         System.out.println("=======================================================\n");
+        System.out.println("Retrieving subscribers list..........\n");
+        EventBusListener.prepareSubscriptionList(); // recover durable topics and message from disk
+        System.out.println("Subscribers list is up and running..........\n");
+        System.out.println("=======================================================\n");
+        
         /////////////////////////////////////////////////////////////////////////////
         executor = (ThreadPoolExecutor) Executors.newCachedThreadPool();
         /////////////////////////////////////////////////////////////////////////////

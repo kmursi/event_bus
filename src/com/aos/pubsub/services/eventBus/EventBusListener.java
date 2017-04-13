@@ -11,6 +11,8 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
@@ -41,8 +43,9 @@ public class EventBusListener extends Thread {
     /* create a hash map table that holds a concurrent hash map to assure synchronization
     *  each hash element contains a string ID (file name) and array of Messages*/
     static volatile Map<String, List<Message>> indexBus = new ConcurrentHashMap<String, List<Message>>();
-    
-    static volatile Map<String, Set<String>> topicSubscibtionList = new ConcurrentHashMap<String, Set<String>>();
+    static volatile Map<String, List<Message>> durableIndexBus = new ConcurrentHashMap<String, List<Message>>();
+    static volatile Map<String, Set<SubscribtionModel>> topicSubscibtionList = new ConcurrentHashMap<String, Set<SubscribtionModel>>();
+	private ObjectOutputStream writer;
 
     /*********************************************************************************************/
 
@@ -60,13 +63,19 @@ public class EventBusListener extends Thread {
         else if (listeningPort == publishMessagePort)        //call Register_a_File() if its port is connected with a peer
         	receivingMessage();
         else if (listeningPort == SubscribtionRequest)        //call Register_a_File() if its port is connected with a peer
-        	Subscribe_Topic_Request();
+        	SubscribeTopicRequest();
         else if (listeningPort == subscriberPullRequest)        //call Register_a_File() if its port is connected with a peer
         	subscriberPullRequest();
     }
 
     /*********************************************************************************************/
-
+    synchronized void checkMessagesValidit()
+    {
+    	while(true)
+    	{
+    		
+    	}
+    }
     synchronized void receivingTopicRequest() {
         try {
             String topicName;                             // define an integer peer ID which is the  peer port
@@ -104,8 +113,12 @@ public class EventBusListener extends Thread {
                 	System.out.println("Topic " + topicName + "  created in the event bus \n");
                     /////////////////////////////////////////////////////////////////////////////
                     indexBus.put(topicName, messageList);             //store the hashmap element
+                    
                     if(topic.isDurable())							  // log only when topic is durable
-                    	topicLog(messageMarker, "topic");
+                    {
+                    	durableIndexBus.put(topicName, messageList);
+                    	topicLog();
+                    }
                  
             }else{
             	System.out.println("Invalid object passed . returning....");
@@ -141,7 +154,7 @@ public class EventBusListener extends Thread {
 
     /*********************************************************************************************/
 
-    synchronized void Subscribe_Topic_Request() {
+    synchronized void SubscribeTopicRequest() {
         try{
             String topicName,reply=null;                             // define an integer peer ID which is the  peer port
             List<Message> messageList;
@@ -162,15 +175,15 @@ public class EventBusListener extends Thread {
             	{
                 	////////////////////////////////////////////////////////////
                 	SubscribtionModel subModel = new SubscribtionModel();
-                	//subModel.setPort(port);
+                	subModel.setPort(peerID);
                 	subModel.setIP(subIP);
                 	subModel.setTopicName(topicName);
-                	Set<String>  list = topicSubscibtionList.get(subModel.getTopicName());
+                	Set<SubscribtionModel>  list = topicSubscibtionList.get(subModel.getTopicName());
                 	if(list == null){
                 		list = new HashSet<>();
                 		
                 	}
-                	list.add(subIP);
+                	list.add(subModel);
                 	//topicSubscibtionList.put(subModel.getTopicName(),list);
                 	//////////////////////////////////////////////////////////////
                 	if(topicSubscibtionList.containsKey(topicName))
@@ -179,11 +192,10 @@ public class EventBusListener extends Thread {
                 	}
                 	else
                 	{
-                		Subscription_Recorder(subIP+"-"+recievedString);
                 		topicSubscibtionList.put(subModel.getTopicName(),list);
+                		Subscription_Recorder();
                 		reply="You are now subcribing topic '"+topicName+"'";
                 		System.out.println("Subscribtion request from "+subIP+":"+peerID+" accepted for topic "+topicName+"\n");
-                		
                 	}
             	}
             	else
@@ -217,26 +229,14 @@ public class EventBusListener extends Thread {
     	//System.out.println("\nhi\n");
     }
     
-    public void topicLog(MessageMarker message, String type)
+    public void topicLog()
     {
-    	String path=null;
-    	if(type.equals("topic"))
-    	{
-    		path="/Topic_Log.txt";
-    	}
-    	else if (type.equals("message"))
-    	{
-    		path="/message_Log.txt";
-    	}
-    	FileOutputStream file;
-    	File folder = new File(".");
+    	FileOutputStream file=null;
+    	File folder = Main.parentFolder;
 		try {
-			file = new FileOutputStream(folder+path,true);
-		
-    	ObjectOutputStream writer = new ObjectOutputStream(file);
-    	writer.writeObject(message);
-    	
-    	
+			file = new FileOutputStream(folder+Main.topicObjectPath);
+    	writer = new ObjectOutputStream(file);
+    	writer.writeObject(durableIndexBus);
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -244,32 +244,39 @@ public class EventBusListener extends Thread {
 		catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		}finally{
+			try {
+				writer.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
     }
     
-    public void Subscription_Recorder(String record) //write the downloaded file into the local director
+    public void Subscription_Recorder() //write the downloaded file into the local director
     {
-        try
-        {
-            //final File f = new File(Main.class.getProtectionDomain().getCodeSource().getLocation().getPath()); //get the jar directory
-            //File parentFolder = new File(f.getParent());                                     //get the parent folder of the jar
-            //File folder = new File(parentFolder.getParent()+"/peer1/src/main/resources"); //get the resources folder path
-        	File folder = new File(".");
-            FileWriter writer = new FileWriter(folder+"/Subscribtion_Records.txt",true);//initiate writer
-            /////////////////////////////////////////////////////////////////////////////
-            writer.write(record+"\n"); 
-            //write
-            writer.close();                                           //close writer
-        }
-        catch(UnknownHostException unknownHost){                      //To Handle Unknown Host Exception
-            System.err.println("host not available..!");
-        }
-        catch(IOException ioException){                               //To Handle Input-Output Exception
-            ioException.printStackTrace();
-        }
-        catch(Exception e){
-            e.printStackTrace();
-        }
+        FileOutputStream file=null;
+    	File folder = Main.parentFolder;
+		try {
+			file = new FileOutputStream(folder+Main.subscriptionObjectPath);
+    	writer = new ObjectOutputStream(file);
+    	writer.writeObject(topicSubscibtionList);
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}finally{
+			try {
+				writer.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
     }
     
     synchronized void receivingMessage() {
@@ -304,7 +311,10 @@ public class EventBusListener extends Thread {
             	}
             	indexBus.put(topicNameStr, messageList);
             	if(m.isDurable())  //only durable messaged gets persisted
-            		topicLog(m, "message");
+            	{
+            		durableIndexBus.put(topicNameStr, messageList);
+            		topicLog();
+            	}
             	System.out.println("Added new message  "+messageModel.getData() + " in topic "+topicNameStr );
             }else{
             	System.out.println("Invalid object passed . returning....");
@@ -335,70 +345,48 @@ public class EventBusListener extends Thread {
         }
 
         finally {
-            System.out.println("Type the action number as following:");
+            System.out.println("\nType the action number as following:");
             System.out.println("1. To exit.\n");
             Thread.currentThread().stop();
         }
     }
 
-	public static void prepareEventBus() {
-		String topicObjectPath="/Topic_Log.txt";
-		String messageObjectPath="/message_Log.txt";
-		String subscriptionObjectPath="/Subscribtion_Records.txt";
+	public static void prepareEventBus() throws IOException {
+		String topicObjectPath= Main.topicObjectPath;
     	FileInputStream fileTopic;
-    	FileInputStream fileMessage;
-    	FileInputStream fileSub;
-    	ObjectInputStream topicReader = null,messageReader = null , subscriptionReader = null;
-    	File folder = new File(".");
-		try {
-			
-			fileTopic = new FileInputStream(folder+topicObjectPath);			
+    	ObjectInputStream topicReader = null,messageReader = null ;
+    	File folder = Main.parentFolder;
+    	//System.out.println("path"+folder.toString());
+    	if(Files.size(Paths.get(folder+topicObjectPath))>0)
+    	{
+			fileTopic = new FileInputStream(folder+topicObjectPath);
 			topicReader = new ObjectInputStream(fileTopic);
-			Object objTopic,ObjMesg,subObj;
 			try{
-				while(( objTopic = topicReader.readObject())!=null){
-					TopicModel topicObject =(TopicModel) objTopic;
-					indexBus.put(topicObject.getTopicName(), new ArrayList<Message>());
+				while(true){
+					//objTopic = 
+						Map topicObject = (Map)topicReader.readObject();
+					indexBus= topicObject;
+					durableIndexBus=topicObject;	
 				}
-			}catch (IOException e) {
+			}
+			catch (ClassNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			catch (IOException e) {
 				
 			}
-			
-			fileMessage = new FileInputStream(folder+messageObjectPath);			
-			messageReader = new ObjectInputStream(fileMessage);
 			try{
-				while(( ObjMesg = messageReader.readObject())!=null){
-					Message msgObject =(Message) ObjMesg;
-					List<Message> tpList = indexBus.get(msgObject.getTopicName());
-					tpList.add(msgObject);
-					indexBus.put(msgObject.getTopicName(),tpList);
-				}
-			}catch (IOException e) {
-				
-			}
-			
-			/*fileSub = new FileInputStream(folder+subscriptionObjectPath);			
-			subscriptionReader = new ObjectInputStream(fileSub);
-			try{
-				while(( subObj = subscriptionReader.readObject())!=null){
-					SubscribtionModel subObject =(SubscribtionModel) subObj;
-					Set<String> subList = topicSubscibtionList.get(subObject.getTopicName());
-					subList.add(subObject.getIP());
-					topicSubscibtionList.put(subObject.getTopicName(),subList);
-				}
-			}catch (IOException e) {
-				
-			}*/
-			System.out.println(" printing recreated index bus");
+			System.out.println("*********************************************************************************************");
+			System.out.println("Printing recreated index bus..!");
 			for(Map.Entry<String, List<Message>> entry : indexBus.entrySet()){
-				System.out.println("Topic name "+entry.getKey() +" conatains below message");
+				System.out.println("\nTopic name "+entry.getKey() +" conatains below message:");
 				for(Message m : entry.getValue()){
 					System.out.println(m.getData());
 				}
 			}
+			System.out.println("*********************************************************************************************");
     	
-		} catch (FileNotFoundException e) {
-				System.out.println("Event Bus is about to be created..\n");
 		}
 		catch(Exception e){
 			e.printStackTrace();
@@ -412,10 +400,77 @@ public class EventBusListener extends Thread {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			
+
+			}
 		}
+    	else
+    	{
+    		System.out.println("\nThis server has no previously recorded topics..!\n");
+    	}
 		
 	}
+	
+	public static void prepareSubscriptionList() throws IOException {
+		String subscribersObjectPath= Main.subscriptionObjectPath;
+    	FileInputStream subscriptionInput;
+    	ObjectInputStream subscriptionReader = null,messageReader = null ;
+    	File folder = Main.parentFolder;
+    	if(Files.size(Paths.get(folder+subscribersObjectPath))>0)
+    	{
+    		subscriptionInput = new FileInputStream(folder+subscribersObjectPath);
+    		subscriptionReader = new ObjectInputStream(subscriptionInput);
+    		Map<String, Set<SubscribtionModel>> readObject=null;
+			try{
+				while(true){
+					//objTopic = 
+						//Map topicObject = (Map)subscriptionReader.readObject();
+						readObject = (Map<String, Set<SubscribtionModel>>) subscriptionReader.readObject();
+
+						topicSubscibtionList= readObject;	
+				}
+			}
+			catch (ClassNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			catch (IOException e) {
+				
+			}
+			try{
+			System.out.println("*********************************************************************************************");
+			System.out.println("Printing recreated topic subscibtion list..!");
+			for(Map.Entry<String, Set<SubscribtionModel>> entry : topicSubscibtionList.entrySet()){
+				System.out.println("\nTopic name "+entry.getKey() +" conatains the following subscribers:");
+				for(SubscribtionModel m : entry.getValue()){
+					System.out.println("Subscriper IP:"+m.getIP()+", Subscriber port: "+m.getPort()+"\n");
+				}
+			}
+			System.out.println("*********************************************************************************************");
+    	
+		}
+		catch(Exception e){
+			e.printStackTrace();
+		}finally {
+			try {
+				if(messageReader != null )
+					messageReader.close();
+				if(subscriptionReader != null )
+					subscriptionReader.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+			}
+		}
+    	else
+    	{
+    		System.out.println("\nThis server has no previously recorded topics..!\n");
+    	}
+		
+	}
+	
+	
     
     
 }
