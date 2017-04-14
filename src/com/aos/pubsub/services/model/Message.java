@@ -13,6 +13,7 @@ public class Message implements MessageMarker,Serializable {
 	int id;        //the seq number
     String data;      //holds message data or file name
     String topicName;
+    long createdOn;
     boolean isDurable; //added for fault tolerance
     
     public boolean isDurable() {
@@ -48,6 +49,12 @@ public class Message implements MessageMarker,Serializable {
 	public void setTopicName(String topicName) {
 		this.topicName = topicName;
 	}
-    
+	public long getCreatedOn() {
+		return createdOn;
+	}
+
+	public void setCreatedOn(long createdOn) {
+		this.createdOn = createdOn;
+	}
     
 }

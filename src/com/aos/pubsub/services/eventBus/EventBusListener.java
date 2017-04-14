@@ -13,10 +13,14 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,7 +42,7 @@ import com.aos.pubsub.services.model.TopicModel;
 public class EventBusListener extends Thread {
     Socket conn;
     ObjectMapper mapper = new ObjectMapper();
-    int listeningPort, publishTopicPort = 60000, publishMessagePort = 60001,SubscribtionRequest = 60002, subscriberPullRequest=60003;    //each port hold a deffirent function
+    int listeningPort, publishTopicPort = 60000, publishMessagePort = 60001,SubscribtionRequest = 60002, subscriberPullRequest=60003, messagesByTime=60004;    //each port hold a deffirent function
     static int maxsize = 0;
     /* create a hash map table that holds a concurrent hash map to assure synchronization
     *  each hash element contains a string ID (file name) and array of Messages*/
@@ -66,6 +70,8 @@ public class EventBusListener extends Thread {
         	SubscribeTopicRequest();
         else if (listeningPort == subscriberPullRequest)        //call Register_a_File() if its port is connected with a peer
         	subscriberPullRequest();
+        else if (listeningPort == messagesByTime)        //call Register_a_File() if its port is connected with a peer
+        	getMessagesBasedOnTime();
     }
 
     /*********************************************************************************************/
@@ -306,6 +312,7 @@ public class EventBusListener extends Thread {
             	messageList  = indexBus.get(topicNameStr);
             	Message m = new Message(messageList.size(), messageModel.getData(),topicNameStr );
             	m.setDurable(true);
+            	m.setCreatedOn(messageModel.getCreatedOn());
             	if(messageList != null){
             		messageList.add(m);
             	}
@@ -465,12 +472,88 @@ public class EventBusListener extends Thread {
 		}
     	else
     	{
-    		System.out.println("\nThis server has no previously recorded topics..!\n");
+    		System.out.println("\nThis server has no previously recorded subscribers..!\n");
     	}
 		
 	}
 	
-	
+	public synchronized void getMessagesBasedOnTime()
+	{
+		try 
+		{
+			//socket = new ServerSocket(port);
+			String receivedMessage, topicName;
+			Message message;
+			ObjectOutputStream out;
+			String subIP=conn.getInetAddress().getHostName();
+			Socket socket;
+			Long lastMessageDate;
+			List<Message> subscriberMessage ;
+			//while(true)
+			{
+				ObjectInputStream in = new ObjectInputStream(conn.getInputStream());
+				out = new ObjectOutputStream(conn.getOutputStream());
+				if(!(receivedMessage = (String)in.readObject()).equals(null))
+				{
+				//System.out.println("\nhi splitter\n");
+				String splitter [] = receivedMessage.split("-");
+				topicName=splitter[0].trim();
+				//DateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm",Locale.US);
+				lastMessageDate = Long.parseLong(splitter[1].trim());
+				/////////////////////////////////////////////////////////////////////////
+				
+				if(conn.isConnected())
+				{
+					subscriberMessage = EventBusListener.indexBus.get(topicName);
+					if(!subscriberMessage.isEmpty())
+					{
+						subscriberMessage = EventBusListener.indexBus.get(topicName);
+						for(int i=0; i<subscriberMessage.size();i++)
+						{
+							message=subscriberMessage.get(i);
+							//long milliseconds = lastMessageDate.getTime();
+							//System.out.println("message.getCreatedOn() "+message.getCreatedOn()+">lastMessageDate"+ lastMessageDate);
+							if(message.getCreatedOn()>lastMessageDate)
+							{
+							System.out.println(message.getTopicName());
+							
+							
+							//pushToSubscriber(message);
+							System.out.println("\nConnected to the subscriber..\n");
+				              //initiate writer
+				            out.flush();
+				            out.writeObject(mapper.writeValueAsString(message));                                 //send the message
+				            out.flush();
+							}
+						}
+						
+					}
+				}
+				
+				//System.out.println("Subscriber "+subIP+":"+port+" received messaeges in "+(msgRecievingEndTime - msgRecievingStartTime) +" milliseconds" );
+				System.out.println("Subscriber "+subIP+" has been disconnected..!");
+			  }
+			}
+			conn.close();
+		} 
+		catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (ClassNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
+		finally
+		{
+			try {
+				conn.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
+	}
     
     
 }

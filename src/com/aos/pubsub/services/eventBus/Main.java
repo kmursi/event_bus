@@ -49,6 +49,8 @@ public class Main extends Thread{
         t3.start();                                     //Start thread
         Thread t4 = new Thread (new Main(60003));   //Create a thread that Listen for registration requests from peers
         t4.start();                                     //Start thread
+        Thread t5 = new Thread (new Main(60004));   //Create a thread that Listen for registration requests from peers
+        t5.start();   
         while (true)
         {
             System.out.println("Type the action number as following:");

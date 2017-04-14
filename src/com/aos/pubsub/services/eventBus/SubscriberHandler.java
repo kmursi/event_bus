@@ -23,6 +23,7 @@ public class SubscriberHandler extends Thread {
 	ObjectOutputStream out;
 	String subIP;
 	Socket socket;
+	int lastMessage;
 	private ObjectMapper mapper = new ObjectMapper();
 	List<Message> subscriberMessage ;
 	public SubscriberHandler(Socket socket,int port)
@@ -37,7 +38,6 @@ public class SubscriberHandler extends Thread {
 		{
 			//socket = new ServerSocket(port);
 			String receivedMessage, topicName;
-			int lastMessage;
 			Message message;
 			//while(true)
 			{
@@ -57,7 +57,7 @@ public class SubscriberHandler extends Thread {
 					if(lastMessage<subscriberMessage.size())
 					{
 						subscriberMessage = EventBusListener.indexBus.get(topicName);
-						for(int i=Integer.parseInt(splitter[1].trim())+1; i<subscriberMessage.size();i++)
+						for(int i=lastMessage; i<subscriberMessage.size();i++)
 						{
 							message=subscriberMessage.get(i);
 							System.out.println(message.getTopicName());
@@ -96,6 +96,8 @@ public class SubscriberHandler extends Thread {
 		}
 		
 	}
+	
+	
 	
 	//This method handles the sending to the subscriber
 	void pushToSubscriber( MessageMarker marker )
