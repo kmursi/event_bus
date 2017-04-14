@@ -488,7 +488,7 @@ public class EventBusListener extends Thread {
 			String subIP=conn.getInetAddress().getHostName();
 			Socket socket;
 			Long lastMessageDate;
-			List<Message> subscriberMessage ;
+			List<Message> subscriberMessage =null;
 			//while(true)
 			{
 				ObjectInputStream in = new ObjectInputStream(conn.getInputStream());
@@ -504,9 +504,9 @@ public class EventBusListener extends Thread {
 				
 				if(conn.isConnected())
 				{
-					subscriberMessage = EventBusListener.indexBus.get(topicName);
-					if(!subscriberMessage.isEmpty())
+					if(indexBus.containsKey(topicName))
 					{
+					subscriberMessage = EventBusListener.indexBus.get(topicName);
 						subscriberMessage = EventBusListener.indexBus.get(topicName);
 						for(int i=0; i<subscriberMessage.size();i++)
 						{
@@ -515,18 +515,22 @@ public class EventBusListener extends Thread {
 							//System.out.println("message.getCreatedOn() "+message.getCreatedOn()+">lastMessageDate"+ lastMessageDate);
 							if(message.getCreatedOn()>lastMessageDate)
 							{
-							System.out.println(message.getTopicName());
+							//System.out.println(message.getTopicName());
 							
 							
 							//pushToSubscriber(message);
-							System.out.println("\nConnected to the subscriber..\n");
+							//System.out.println("\nConnected to the subscriber..\n");
 				              //initiate writer
 				            out.flush();
 				            out.writeObject(mapper.writeValueAsString(message));                                 //send the message
 				            out.flush();
 							}
 						}
-						
+						System.out.println("\nMessages sent for topic ("+topicName+") to subscriber "+subIP+"..!\n");
+					}
+					else
+					{
+						System.out.println("\nNo messages retrieved for topic ("+topicName+")..!\n");
 					}
 				}
 				
@@ -550,6 +554,7 @@ public class EventBusListener extends Thread {
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
+				
 			}
 		}
 		
