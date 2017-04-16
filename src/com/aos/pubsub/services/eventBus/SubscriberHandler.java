@@ -14,7 +14,7 @@ import org.codehaus.jackson.map.ObjectMapper;
 
 import com.aos.pubsub.services.model.Message;
 import com.aos.pubsub.services.model.MessageMarker;
-
+//
 
 
 public class SubscriberHandler extends Thread {
