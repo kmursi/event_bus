@@ -39,6 +39,8 @@ public class SubscriberHandler extends Thread {
 			//socket = new ServerSocket(port);
 			String receivedMessage, topicName;
 			Message message;
+			int index=0;
+			long time = new Date().getTime();
 			//while(true)
 			{
 				ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
@@ -48,30 +50,41 @@ public class SubscriberHandler extends Thread {
 				//System.out.println("\nhi splitter\n");
 				String splitter [] = receivedMessage.split("-");
 				topicName=splitter[0].trim();
-				lastMessage=Integer.parseInt(splitter[1].trim());
+				subscriberMessage = EventBusListener.indexBus.get(topicName);
+				lastMessage=getLastMessageIndex(time);
+				System.out.println(lastMessage);
 				/////////////////////////////////////////////////////////////////////////
-				long msgRecievingStartTime = new Date().getTime();
+				//long msgRecievingStartTime = new Date().getTime();
 				while(socket.isConnected())
 				{
 					subscriberMessage = EventBusListener.indexBus.get(topicName);
-					if(lastMessage<subscriberMessage.size())
+					if(lastMessage<subscriberMessage.size()&&subscriberMessage.size()>0)
 					{
-						subscriberMessage = EventBusListener.indexBus.get(topicName);
-						for(int i=lastMessage; i<subscriberMessage.size();i++)
+						//System.out.println("if"+lastMessage);
+						if(lastMessage==-1)
 						{
-							message=subscriberMessage.get(i);
-							System.out.println(message.getTopicName());
-							//pushToSubscriber(message);
-							System.out.println("\nConnected to the subscriber..\n");
-				              //initiate writer
-				            out.flush();
-				            out.writeObject(mapper.writeValueAsString(message));                                 //send the message
-				            out.flush();
+							lastMessage=getLastMessageIndex(time);
+							//System.out.println("condition"+lastMessage);
 						}
-						lastMessage = subscriberMessage.size();
+						else
+						{
+							for(int i=lastMessage; i<subscriberMessage.size();i++)
+							{
+								message=subscriberMessage.get(i);
+								//System.out.println(message.getTopicName());
+								//pushToSubscriber(message);
+								System.out.println("\nConnected to the subscriber..\n");
+					              //initiate writer
+					            out.flush();
+					            out.writeObject(mapper.writeValueAsString(message));                                 //send the message
+					            out.flush();
+					            //index=i;
+							}
+							lastMessage = subscriberMessage.size();
+						}
 					}
 				}
-				long msgRecievingEndTime = new Date().getTime();
+				//long msgRecievingEndTime = new Date().getTime();
 				//System.out.println("Subscriber "+subIP+":"+port+" received messaeges in "+(msgRecievingEndTime - msgRecievingStartTime) +" milliseconds" );
 				System.out.println("Subscriber "+subIP+":"+port+" has been disconnected..!");
 			  }
@@ -148,5 +161,21 @@ public class SubscriberHandler extends Thread {
 			e.printStackTrace();
 		}
 		return resultArray;
+	}
+	
+	
+	public int getLastMessageIndex(long time)
+	{
+		
+		Message message;
+		for(int i=0; i<subscriberMessage.size();i++)
+		{
+			message=subscriberMessage.get(i);
+			//System.out.println("message.getCreatedOn() "+message.getCreatedOn());
+			//System.out.println("time "+time);
+			if(message.getCreatedOn()>=time)
+				return i;
+		}
+		return -1;
 	}
 }
