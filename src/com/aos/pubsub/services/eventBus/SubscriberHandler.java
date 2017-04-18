@@ -7,8 +7,8 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
-import java.util.Date;
-import java.util.List;
+
+import java.util.*;
 
 import org.codehaus.jackson.map.ObjectMapper;
 
@@ -25,7 +25,7 @@ public class SubscriberHandler extends Thread {
 	Socket socket;
 	int lastMessage;
 	private ObjectMapper mapper = new ObjectMapper();
-	List<Message> subscriberMessage ;
+	List <Message> subscriberMessage =new ArrayList();
 	public SubscriberHandler(Socket socket,int port)
 	{
 		this.port=port;
@@ -166,8 +166,17 @@ public class SubscriberHandler extends Thread {
 	
 	public int getLastMessageIndex(long time)
 	{
+		int result;
+		Message m = new Message();
+		m.setCreatedOn(time);
+		 
+		Collections.sort(subscriberMessage, new MessageComp());
+		result = Collections.binarySearch(subscriberMessage, m, new MessageComp());
+		if(result<0)
+			result = -1;
+		return result;
 		
-		Message message;
+		/*Message message;
 		for(int i=0; i<subscriberMessage.size();i++)
 		{
 			message=subscriberMessage.get(i);
@@ -176,6 +185,18 @@ public class SubscriberHandler extends Thread {
 			if(message.getCreatedOn()>=time)
 				return i;
 		}
-		return -1;
+		return -1;*/
 	}
+	
+}
+
+class MessageComp implements Comparator<Message>{
+	@Override 
+    public int compare(Message e1, Message e2) {
+        if(e1.getCreatedOn()> e2.getCreatedOn()){
+            return 0;
+        } else {
+            return -1;
+        }
+    }
 }

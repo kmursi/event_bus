@@ -56,5 +56,8 @@ public class Message implements MessageMarker,Serializable {
 	public void setCreatedOn(long createdOn) {
 		this.createdOn = createdOn;
 	}
-    
+	/*@Override
+    public int compareTo(Message o) {
+        return Long.compare(createdOn, o.createdOn);
+    }*/
 }
