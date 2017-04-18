@@ -13,7 +13,7 @@ public class Message implements MessageMarker,Serializable {
 	int id;        //the seq number
     String data;      //holds message data or file name
     String topicName;
-    long createdOn;
+    long createdOn, expiration;
     boolean isDurable; //added for fault tolerance
     
     public boolean isDurable() {
@@ -56,6 +56,15 @@ public class Message implements MessageMarker,Serializable {
 	public void setCreatedOn(long createdOn) {
 		this.createdOn = createdOn;
 	}
+	
+	public long getExpirationDate() {
+		return expiration;
+	}
+	
+	public void setExpirationDate(long expiration) {
+		this.expiration = expiration;
+	}
+	
 	/*@Override
     public int compareTo(Message o) {
         return Long.compare(createdOn, o.createdOn);

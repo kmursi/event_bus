@@ -52,7 +52,9 @@ public class EventBusListener extends Thread {
 	private ObjectOutputStream writer;
 
     /*********************************************************************************************/
-
+	public EventBusListener() {
+                            // let the local port to have the value of the received one
+    }
     public EventBusListener(Socket s, int port) {
         conn = s;                                       // let the local socket to have the value of the received one
         this.listeningPort = port;                      // let the local port to have the value of the received one
@@ -311,7 +313,8 @@ public class EventBusListener extends Thread {
             	String topicNameStr = messageModel.getTopicName();
             	messageList  = indexBus.get(topicNameStr);
             	Message m = new Message(messageList.size(), messageModel.getData(),topicNameStr );
-            	m.setDurable(true);
+            	m.setDurable(messageModel.isDurable());
+            	m.setExpirationDate(messageModel.getExpirationDate());
             	m.setCreatedOn(messageModel.getCreatedOn());
             	if(messageList != null){
             		messageList.add(m);
