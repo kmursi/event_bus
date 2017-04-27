@@ -37,7 +37,7 @@ public class SubscriberHandler extends Thread {
                     String splitter[] = receivedMessage.split("-");				  //split the string
                     topicName = splitter[0].trim();								  //split 0 = topic name
                     subscriberMessage = EventBusListener.indexBus.get(topicName); //get the topic array list
-                    lastMessage = getLastMessageIndex(time);
+                    lastMessage = -1;
                     System.out.println(lastMessage);
                     /////////////////////////////////////////////////////////////////////////
                     while (socket.isConnected()) {
@@ -95,14 +95,32 @@ public class SubscriberHandler extends Thread {
     
     /*********************************************************************************************/
 
-    public int getLastMessageIndex(long time) {
-        int result;
+    synchronized public int getLastMessageIndex(long time) {
+    	//
+        int result=-1;
+        try{
+        long startTime=System.nanoTime();
+        System.out.println("Current time:"+startTime);
         Message m = new Message();									//create temporary message to use it of comparison
-        m.setCreatedOn(time);										//set the desired time 
-        Collections.sort(subscriberMessage, new MessageComp());		//sort the collection
+        m.setCreatedOn(time);										//set the desired time
+        System.out.println("Binary serch started in the eventbus: "+System.currentTimeMillis()+"\n");
+        //Collections.sort(subscriberMessage, new MessageComp());		//sort the collection
         result = Collections.binarySearch(subscriberMessage, m, new MessageComp());//do binary search
-        if (result < 0)
-            result = -1;
+        System.out.println("Binary serch ended: "+System.currentTimeMillis()+"\n");
+	        if (result < 0)
+	            result = -1;
+	        else
+	        {
+	        	long finishTime= System.nanoTime()-startTime;
+	        	System.out.println("Start time:"+startTime);
+	        	System.out.println("Current time:"+System.currentTimeMillis());
+	        	System.out.println("Binary search ended in:"+finishTime+" nsec.");
+	        }
+    	}
+    	catch(Exception e)
+    	{
+    		e.printStackTrace();
+    	}
         return result;
 
     }
@@ -113,7 +131,8 @@ class MessageComp implements Comparator<Message> {
     @Override
     public int compare(Message e1, Message e2) {
         if (e1.getCreatedOn() > e2.getCreatedOn()) { //the specified date must be < the message date in order to be sent to the subscriber
-            return 0;
+        	System.out.println("e1 "+e1.getCreatedOn()+" e2"+e2.getCreatedOn());
+        	return 0;
         } else {
             return -1;
         }
