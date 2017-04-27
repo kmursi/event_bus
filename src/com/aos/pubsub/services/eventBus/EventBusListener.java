@@ -13,15 +13,16 @@ import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
-
+//
 /**
  * Created by kmursi on 3/10/17.
  */
 
 public class EventBusListener extends Thread {
     static int maxsize = 0;
-    static volatile Map<String, List<Message>> indexBus = new ConcurrentHashMap<String, List<Message>>(); //Main eventbus
+    static volatile  Map<String, List<Message>> indexBus = new ConcurrentHashMap<String, List<Message>>(); //Main eventbus
     static volatile Map<String, List<Message>> durableIndexBus = new ConcurrentHashMap<String, List<Message>>(); //durable message eventbus
     static volatile Map<String, Set<SubscribtionModel>> topicSubscibtionList = new ConcurrentHashMap<String, Set<SubscribtionModel>>(); //list of subscribers and their topics
     Socket conn;
@@ -31,8 +32,8 @@ public class EventBusListener extends Thread {
 
     /*********************************************************************************************/
     
-    public EventBusListener() {
-
+    public EventBusListener(int port) {
+    	this.listeningPort = port; 
     }
     
     /*********************************************************************************************/
@@ -45,6 +46,7 @@ public class EventBusListener extends Thread {
     /*********************************************************************************************/
     
     public static void prepareEventBus() throws IOException {
+    	long startTime=System.currentTimeMillis();
         String topicObjectPath = Main.topicObjectPath;				//get log file location
         FileInputStream fileTopic;
         ObjectInputStream topicReader = null, messageReader = null;
@@ -55,8 +57,9 @@ public class EventBusListener extends Thread {
             topicReader = new ObjectInputStream(fileTopic);
             /////////////////////////////////////////////////////////////////////////////
             try {
+            	Map<String, List<Message>> topicObject=new ConcurrentHashMap<String, List<Message>>();
                 while (true) {
-                    Map topicObject = (Map) topicReader.readObject();
+                    topicObject = (ConcurrentHashMap<String, List<Message>>)topicReader.readObject();
                     indexBus = topicObject;							//load the main eventbus
                     durableIndexBus = topicObject;					//load the durable eventbus
                 }
@@ -69,13 +72,15 @@ public class EventBusListener extends Thread {
             /////////////////////////////////////////////////////////////////////////////
             try {
                 System.out.println("*********************************************************************************************");
-                System.out.println("Printing recreated index bus..!");
+                System.out.println("Printing the reloaded event bus ..!");
                 for (Map.Entry<String, List<Message>> entry : indexBus.entrySet()) {
                     System.out.println("\nTopic name " + entry.getKey() + " conatains below message:");
                     for (Message m : entry.getValue()) {			//print the current evenbus after reloading
                         System.out.println(m.getData());
                     }
                 }
+                long duration= System.currentTimeMillis()-startTime;
+                System.out.println("The event bus consumed "+duration+" msec to reload !\n");
                 System.out.println("*********************************************************************************************");
             } catch (Exception e) {
                 e.printStackTrace();
@@ -99,6 +104,7 @@ public class EventBusListener extends Thread {
     /*********************************************************************************************/
     
     public static void prepareSubscriptionList() throws IOException {
+    	long startTime= System.currentTimeMillis();
         String subscribersObjectPath = Main.subscriptionObjectPath; //get the subscribers log path
         FileInputStream subscriptionInput;
         ObjectInputStream subscriptionReader = null, messageReader = null;
@@ -107,11 +113,11 @@ public class EventBusListener extends Thread {
         if (Files.size(Paths.get(folder + subscribersObjectPath)) > 0) {
             subscriptionInput = new FileInputStream(folder + subscribersObjectPath);
             subscriptionReader = new ObjectInputStream(subscriptionInput);
-            Map<String, Set<SubscribtionModel>> readObject = null;
+            Map<String, Set<SubscribtionModel>> readObject = new ConcurrentHashMap<String, Set<SubscribtionModel>>();;
             /////////////////////////////////////////////////////////////////////////////
             try {
                 while (true) {
-                    readObject = (Map<String, Set<SubscribtionModel>>) subscriptionReader.readObject(); //read the file
+                    readObject = (ConcurrentHashMap<String, Set<SubscribtionModel>>) subscriptionReader.readObject(); //read the file
                     topicSubscibtionList = readObject;					//store the log list into local list
                 }
             } catch (ClassNotFoundException e) {
@@ -129,6 +135,8 @@ public class EventBusListener extends Thread {
                         System.out.println("Subscriper IP:" + m.getIP() + ", Subscriber port: " + m.getPort() + "\n");
                     }
                 }
+                long duration= System.currentTimeMillis()-startTime;
+                System.out.println("The event bus consumed "+duration+" msec to reload !\n");
                 System.out.println("*********************************************************************************************");
             } catch (Exception e) {
                 e.printStackTrace();
@@ -167,10 +175,53 @@ public class EventBusListener extends Thread {
         /////////////////////////////////////////////////////////////////////////////
         else if (listeningPort == messagesByTime)        		//call getMessagesBasedOnTime() if its port is connected the server
             getMessagesBasedOnTime();
+        else if (listeningPort == 0)        		//call getMessagesBasedOnTime() if its port is connected the server
+        	grbageCollector();
+        
     }
 
     /*********************************************************************************************/
-
+    public void grbageCollector() {
+        while (true) {
+            Message m;
+            long currentTime = new Date().getTime();									//store the current time
+            for (Entry<String, List<Message>> entry : EventBusListener.indexBus.entrySet()) {
+                String key = entry.getKey();											//save the message key
+                List<Message> list = entry.getValue();									//save the message value
+                /////////////////////////////////////////////////////////////////////////////
+                for (int i = 0; i < list.size(); i++) {
+                    m = list.get(i);													//get the message
+                    if (currentTime > m.getExpirationDate()) {							//if the message expired
+                        System.out.println("Message " + EventBusListener.indexBus.get(key).get(i).getId() + " !has been deleted from the main EventBus due to its expiration date !\n");
+                        EventBusListener.indexBus.get(key).remove(i);					//remove the message from the event bus
+                    }
+                }
+                ///////////////////////////////////////////////////////////////////////////// do the same for the durable eventbus
+                for (Entry<String, List<Message>> e : EventBusListener.durableIndexBus.entrySet()) {
+                    String key2 = e.getKey();
+                    List<Message> durableList = e.getValue();
+                    for (int i = 0; i < durableList.size(); i++) {
+                        m = durableList.get(i);
+                        if (currentTime > m.getExpirationDate()) {
+                            System.out.println("Message " + EventBusListener.durableIndexBus.get(key2).get(i).getId() + " has been deleted from the durable messages queue due to its expiration date !\n");
+                            EventBusListener.durableIndexBus.get(key2).remove(i);
+                        }
+                    }
+                    
+                }
+            }
+            topicLog();
+            System.out.println("Garbage collector finished cleaning the EvenetBus !\n");
+            try {
+                sleep(50000);
+            } catch (InterruptedException e1) {
+                // TODO Auto-generated catch block
+                e1.printStackTrace();
+            }
+            
+        }
+    }
+    
     synchronized void receivingTopicRequest() {
         try {
             String topicName;                             		// define an integer peer ID which is the  peer port
@@ -207,7 +258,6 @@ public class EventBusListener extends Thread {
                 if (topic.isDurable())                            // log only when topic is durable
                 {
                     durableIndexBus.put(topicName, messageList);
-                    topicLog();
                 }
 
             } else {
@@ -297,21 +347,29 @@ public class EventBusListener extends Thread {
      * this method used to record the event bus into the log file
      ********************************************************************************************* */
     
-    public void topicLog() {
+    synchronized public void topicLog() {
         FileOutputStream file = null;
         File folder = Main.parentFolder;
         //////////////////////////////////////////////////////////////
         try {
             file = new FileOutputStream(folder + Main.topicObjectPath);
             writer = new ObjectOutputStream(file);			//open a stream with the log file
-            writer.writeObject(durableIndexBus);			//write the durable eventbus into the log file
+            Map<String, List<Message>> tempDurableIndexBus= new ConcurrentHashMap<String, List<Message>>();
+            tempDurableIndexBus=durableIndexBus;
+            writer.writeObject(tempDurableIndexBus);			//write the durable eventbus into the log file
+            writer.close();
+            file.close();
         } catch (FileNotFoundException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         } catch (IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
-        } finally {
+        }
+        catch (Exception e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }finally {
             try {
                 writer.close();
             } catch (IOException e) {
@@ -386,7 +444,6 @@ public class EventBusListener extends Thread {
                     if (m.isDurable())  							//only durable messaged gets persisted
                     {
                         durableIndexBus.put(topicNameStr, messageList);
-                        topicLog();
                     }
                     System.out.println("Added new message  " + messageModel.getData() + " in topic " + topicNameStr);
                 } else {
@@ -434,22 +491,34 @@ public class EventBusListener extends Thread {
                     topicName = splitter[0].trim();							// split 0 = topic name
                     lastMessageDate = Long.parseLong(splitter[1].trim());	//split 1 = the desired date
                     /////////////////////////////////////////////////////////////////////////
+                    //while(true)
+                    {
                     if (conn.isConnected()) {
                         if (indexBus.containsKey(topicName)) {
                             subscriberMessage = EventBusListener.indexBus.get(topicName); //get the required topic array list
+                            long startTime=System.nanoTime();
+                            System.out.println("Sequential serch started in the eventbus\n");
+                            boolean flag=false;
                             for (int i = 0; i < subscriberMessage.size(); i++) {
                                 message = subscriberMessage.get(i);
                                 if (message.getCreatedOn() > lastMessageDate) {			//check if the message date > the required date
                                     out.flush();
                                     out.writeObject(mapper.writeValueAsString(message)); //send the message
                                     out.flush();
+                                    if(flag==false)
+                                    {
+                                    	flag=true;
+                                    }
                                 }
                             }
+                            long duration=System.nanoTime()-startTime;
+                            System.out.println("Sequential serch in the eventbus has been ended in: "+duration+" nsec\n");
                             System.out.println("\nMessages sent for topic (" + topicName + ") to subscriber " + subIP + "..!\n");
                         } else {
                             System.out.println("\nNo messages retrieved for topic (" + topicName + ")..!\n");
                         }
                     }
+                }
                     System.out.println("Subscriber " + subIP + " has been disconnected..!");
                 }
             }
