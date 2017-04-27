@@ -1,6 +1,8 @@
-//tests
+//test
 package com.aos.pubsub.services.eventBus;
 import com.aos.pubsub.services.model.Message;
+import com.aos.pubsub.services.model.SubscribtionModel;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -10,6 +12,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Scanner;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 
@@ -86,8 +89,8 @@ public class Main extends Thread {
     public synchronized void run() {
 
         if (port == 0) {
-            System.out.println("Running the garbage collector thread..!\n");
-            grbageCollector();
+        	EventBusListener listener = new EventBusListener( port);
+            executor.execute(listener);		
         } else {
             try {
                 System.out.println("PORT " + port);
@@ -109,43 +112,5 @@ public class Main extends Thread {
     }
 
     /*********************************************************************************************/
-    
-    public void grbageCollector() {
-        while (true) {
-            Message m;
-            long currentTime = new Date().getTime();									//store the current time
-            for (Entry<String, List<Message>> entry : EventBusListener.indexBus.entrySet()) {
-                String key = entry.getKey();											//save the message key
-                List<Message> list = entry.getValue();									//save the message value
-                /////////////////////////////////////////////////////////////////////////////
-                for (int i = 0; i < list.size(); i++) {
-                    m = list.get(i);													//get the message
-                    if (currentTime > m.getExpirationDate()) {							//if the message expired
-                        System.out.println("Message " + EventBusListener.indexBus.get(key).get(i).getId() + " !has been deleted from the main EventBus due to its expiration date !\n");
-                        EventBusListener.indexBus.get(key).remove(i);					//remove the message from the event bus
-                    }
-                }
-                ///////////////////////////////////////////////////////////////////////////// do the same for the durable eventbus
-                for (Entry<String, List<Message>> e : EventBusListener.durableIndexBus.entrySet()) {
-                    String key2 = e.getKey();
-                    List<Message> durableList = e.getValue();
-                    for (int i = 0; i < durableList.size(); i++) {
-                        m = durableList.get(i);
-                        if (currentTime > m.getExpirationDate()) {
-                            System.out.println("Message " + EventBusListener.durableIndexBus.get(key2).get(i).getId() + " has been deleted from the durable messages queue due to its expiration date !\n");
-                            EventBusListener.durableIndexBus.get(key2).remove(i);
-                        }
-                    }
-                    new EventBusListener().topicLog();
-                }
-            }
-            try {
-                sleep(50000);
-            } catch (InterruptedException e1) {
-                // TODO Auto-generated catch block
-                e1.printStackTrace();
-            }
-            System.out.println("Garbage collector finished cleaning the EvenetBus !\n");
-        }
-    }
+
 }
