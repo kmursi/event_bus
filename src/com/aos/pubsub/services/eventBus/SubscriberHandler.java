@@ -38,7 +38,7 @@ public class SubscriberHandler extends Thread {
                     topicName = splitter[0].trim();								  //split 0 = topic name
                     subscriberMessage = EventBusListener.indexBus.get(topicName); //get the topic array list
                     lastMessage = -1;
-                    System.out.println(lastMessage);
+                    //System.out.println(lastMessage);
                     /////////////////////////////////////////////////////////////////////////
                     while (socket.isConnected()) {
                         subscriberMessage = EventBusListener.indexBus.get(topicName);//get the topic array list
@@ -46,16 +46,21 @@ public class SubscriberHandler extends Thread {
                             if (lastMessage == -1) {								//unknown index
                                 lastMessage = getLastMessageIndex(time);			//get last message index
                             } else {
+                            	System.out.println("=======================================================");
+                            	System.out.println("Sending messages to "+subIP+"-"+port+" in topic '"+topicName+".");
                                 for (int i = lastMessage; i < subscriberMessage.size(); i++) {
                                     message = subscriberMessage.get(i);				//store the message based on the search index
-                                    System.out.println("\nConnected to the subscriber..\n");
+                                    //System.out.println("Connected to the subscriber..\n");
                                     out.flush();
                                     out.writeObject(mapper.writeValueAsString(message));//send the message
                                     out.flush();
                                 }
+                                System.out.println("New messages have been sent to "+subIP+"-"+port+".");
+                                System.out.println("=======================================================\n");
                                 lastMessage = subscriberMessage.size();
                             }
                         }
+                        sleep(50000);
                     }
                     System.out.println("Subscriber " + subIP + ":" + port + " has been disconnected..!");
                 }
@@ -68,7 +73,10 @@ public class SubscriberHandler extends Thread {
         } catch (ClassNotFoundException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
-        } finally {
+        } catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} finally {
             try {
                 socket.close();
             } catch (IOException e) {
@@ -83,7 +91,7 @@ public class SubscriberHandler extends Thread {
     //This method handles the sending to the subscriber
     void pushToSubscriber(MessageMarker marker) {
         try {
-            System.out.println("\nConnected to the subscriber..\n");
+            System.out.println("Connected to the subscriber..");
             out = new ObjectOutputStream(socket.getOutputStream());   							//initiate writer
             out.flush();
             out.writeObject(mapper.writeValueAsString(marker));                                 //send the message
@@ -96,25 +104,19 @@ public class SubscriberHandler extends Thread {
     /*********************************************************************************************/
 
     synchronized public int getLastMessageIndex(long time) {
-    	//
         int result=-1;
         try{
         long startTime=System.nanoTime();
-        System.out.println("Current time:"+startTime);
         Message m = new Message();									//create temporary message to use it of comparison
         m.setCreatedOn(time);										//set the desired time
-        System.out.println("Binary serch started in the eventbus: "+System.currentTimeMillis()+"\n");
-        //Collections.sort(subscriberMessage, new MessageComp());		//sort the collection
         result = Collections.binarySearch(subscriberMessage, m, new MessageComp());//do binary search
-        System.out.println("Binary serch ended: "+System.currentTimeMillis()+"\n");
 	        if (result < 0)
 	            result = -1;
 	        else
 	        {
 	        	long finishTime= System.nanoTime()-startTime;
-	        	System.out.println("Start time:"+startTime);
-	        	System.out.println("Current time:"+System.currentTimeMillis());
-	        	System.out.println("Binary search ended in:"+finishTime+" nsec.");
+	        	System.out.println("Binary search consumed:"+finishTime+" nsec to finish searching.");
+	        	System.out.println("=======================================================\n");
 	        }
     	}
     	catch(Exception e)
@@ -130,8 +132,8 @@ public class SubscriberHandler extends Thread {
 class MessageComp implements Comparator<Message> {
     @Override
     public int compare(Message e1, Message e2) {
-        if (e1.getCreatedOn() > e2.getCreatedOn()) { //the specified date must be < the message date in order to be sent to the subscriber
-        	System.out.println("e1 "+e1.getCreatedOn()+" e2"+e2.getCreatedOn());
+        if (e1.getCreatedOn() >= e2.getCreatedOn()) { //the specified date must be < the message date in order to be sent to the subscriber
+        	//System.out.println("e1 "+e1.getCreatedOn()+" e2"+e2.getCreatedOn());
         	return 0;
         } else {
             return -1;

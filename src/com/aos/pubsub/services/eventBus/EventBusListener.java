@@ -71,17 +71,17 @@ public class EventBusListener extends Thread {
             }
             /////////////////////////////////////////////////////////////////////////////
             try {
-                System.out.println("*********************************************************************************************");
+            		//System.out.println("=======================================================");
                 System.out.println("Printing the reloaded event bus ..!");
                 for (Map.Entry<String, List<Message>> entry : indexBus.entrySet()) {
-                    System.out.println("\nTopic name " + entry.getKey() + " conatains below message:");
+                    System.out.println("Topic " + entry.getKey() + " conatains below message:");
                     for (Message m : entry.getValue()) {			//print the current evenbus after reloading
                         System.out.println(m.getData());
                     }
                 }
                 long duration= System.currentTimeMillis()-startTime;
-                System.out.println("The event bus consumed "+duration+" msec to reload !\n");
-                System.out.println("*********************************************************************************************");
+                System.out.println("The event bus consumed "+duration+" msec to reload the messages form messages log!");
+                //System.out.println("=======================================================\n");
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {
@@ -97,7 +97,9 @@ public class EventBusListener extends Thread {
                 /////////////////////////////////////////////////////////////////////////////
             }
         } else {
-            System.out.println("\nThis server has no previously recorded topics..!\n");
+        		//System.out.println("=======================================================");
+            System.out.println("This server has no previously recorded topics..!");
+            //System.out.println("=======================================================\n");
         }
     }
     
@@ -127,17 +129,17 @@ public class EventBusListener extends Thread {
             }
             /////////////////////////////////////////////////////////////////////////////
             try {
-                System.out.println("*********************************************************************************************");
-                System.out.println("Printing recreated topic subscibtion list..!");
+                //System.out.println("*********************************************************************************************");
+                System.out.println("Printing the reloaded subscibtion list..!");
                 for (Map.Entry<String, Set<SubscribtionModel>> entry : topicSubscibtionList.entrySet()) {
-                    System.out.println("\nTopic name " + entry.getKey() + " conatains the following subscribers:");
+                    System.out.println("Topic name " + entry.getKey() + " conatains the following subscribers:");
                     for (SubscribtionModel m : entry.getValue()) {       //print the subscribers list
-                        System.out.println("Subscriper IP:" + m.getIP() + ", Subscriber port: " + m.getPort() + "\n");
+                        System.out.println("Subscriper IP:" + m.getIP() + ", Subscriber port: " + m.getPort() + "");
                     }
                 }
                 long duration= System.currentTimeMillis()-startTime;
-                System.out.println("The event bus consumed "+duration+" msec to reload !\n");
-                System.out.println("*********************************************************************************************");
+                System.out.println("The subscription list consumed "+duration+" msec to reload !");
+                //System.out.println("*********************************************************************************************");
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {
@@ -153,7 +155,7 @@ public class EventBusListener extends Thread {
                 /////////////////////////////////////////////////////////////////////////////
             }
         } else {
-            System.out.println("\nThis server has no previously recorded subscribers..!\n");
+            System.out.println("This server has no previously recorded subscribers..!");
         }
 
     }
@@ -183,6 +185,7 @@ public class EventBusListener extends Thread {
     /*********************************************************************************************/
     public void grbageCollector() {
         while (true) {
+        	System.out.println("=======================================================");
             Message m;
             long currentTime = new Date().getTime();									//store the current time
             for (Entry<String, List<Message>> entry : EventBusListener.indexBus.entrySet()) {
@@ -192,7 +195,7 @@ public class EventBusListener extends Thread {
                 for (int i = 0; i < list.size(); i++) {
                     m = list.get(i);													//get the message
                     if (currentTime > m.getExpirationDate()) {							//if the message expired
-                        System.out.println("Message " + EventBusListener.indexBus.get(key).get(i).getId() + " !has been deleted from the main EventBus due to its expiration date !\n");
+                        System.out.println("Message " + EventBusListener.indexBus.get(key).get(i).getId() + " !has been deleted from the main EventBus due to its expiration date !");
                         EventBusListener.indexBus.get(key).remove(i);					//remove the message from the event bus
                     }
                 }
@@ -203,7 +206,7 @@ public class EventBusListener extends Thread {
                     for (int i = 0; i < durableList.size(); i++) {
                         m = durableList.get(i);
                         if (currentTime > m.getExpirationDate()) {
-                            System.out.println("Message " + EventBusListener.durableIndexBus.get(key2).get(i).getId() + " has been deleted from the durable messages queue due to its expiration date !\n");
+                            System.out.println("Message " + EventBusListener.durableIndexBus.get(key2).get(i).getId() + " has been deleted from the durable messages queue due to its expiration date !");
                             EventBusListener.durableIndexBus.get(key2).remove(i);
                         }
                     }
@@ -211,9 +214,10 @@ public class EventBusListener extends Thread {
                 }
             }
             topicLog();
-            System.out.println("Garbage collector finished cleaning the EvenetBus !\n");
+            System.out.println("Garbage collector finished cleaning the EvenetBus !");
+            System.out.println("=======================================================\n");
             try {
-                sleep(50000);
+                sleep(500000);
             } catch (InterruptedException e1) {
                 // TODO Auto-generated catch block
                 e1.printStackTrace();
@@ -224,6 +228,7 @@ public class EventBusListener extends Thread {
     
     synchronized void receivingTopicRequest() {
         try {
+        		System.out.println("=======================================================");
             String topicName;                             		// define an integer peer ID which is the  peer port
             List<Message> messageList;                    		//String array used for splitting the received message
             /////////////////////////////////////////////////////////////////////////////
@@ -252,7 +257,7 @@ public class EventBusListener extends Thread {
                     messageList = new ArrayList<Message>();		//initiate new list if the current list is null
                     topic.setMessageList(messageList);
                 }
-                System.out.println("Topic " + topicName + "  created in the event bus \n");
+                System.out.println("Topic " + topicName + "  created in the event bus by "+pubIP +".");
                 /////////////////////////////////////////////////////////////////////////////
                 indexBus.put(topicName, messageList);             //store the hashmap element
                 if (topic.isDurable())                            // log only when topic is durable
@@ -267,6 +272,7 @@ public class EventBusListener extends Thread {
             /////////////////////////////////////////////////////////////////////////////
             in.close();                                         //close reader
             conn.close();                                       //close connection
+            System.out.println("=======================================================\n");
         }
         /////////////////////////////////////////////////////////////////////////////
         catch (UnknownHostException unknownHost) {              //To Handle Unknown Host Exception
@@ -277,8 +283,10 @@ public class EventBusListener extends Thread {
             e.printStackTrace();
             System.out.println(e.toString());
         } finally {
+        	System.out.println("=======================================================");
             System.out.println("Type the action number as following:");
-            System.out.println("1. To exit.\n");
+            System.out.println("1. To exit.");
+            System.out.println("=======================================================\n");
             Thread.currentThread().stop();
         }
     }
@@ -287,6 +295,7 @@ public class EventBusListener extends Thread {
 
     synchronized void SubscribeTopicRequest() {
         try {
+        	System.out.println("=======================================================");
             String topicName, reply = null;                      // define an integer peer ID which is the  peer port
             int peerID;
             /////////////////////////////////////////////////////////////////////////////
@@ -311,19 +320,19 @@ public class EventBusListener extends Thread {
                     list.add(subModel);
                     //////////////////////////////////////////////////////////////
                     if (topicSubscibtionList.containsKey(topicName)) {	//search for the topic name
-                        reply = "You are already subcribed to " + topicName + " !\n";
+                        reply = "You are already subcribed to " + topicName + " !";
                     } else {
                         topicSubscibtionList.put(subModel.getTopicName(), list);
                         Subscription_Recorder();						//record the subscriber to a log file
                         reply = "You are now subcribing topic '" + topicName + "'"; 
-                        System.out.println("Subscribtion request from " + subIP + ":" + peerID + " accepted for topic " + topicName + "\n");
+                        System.out.println("Subscription request from " + subIP + ":" + peerID + " accepted for topic " + topicName + ".");
                     }
                 } else {
-                    System.out.println("No message Received!\n");
-                    reply = "Topic not found\n";
+                    System.out.println("No message Received !");
+                    reply = "Topic not found !";
                 }
             } else {
-                System.out.println("No message Received!\n");
+                System.out.println("No message Received !");
                 reply = "Topic not found\n";
             }
             ObjectOutputStream out = new ObjectOutputStream(conn.getOutputStream()); //define object writer
@@ -332,6 +341,7 @@ public class EventBusListener extends Thread {
             in.close();
             out.close();
             conn.close();
+            System.out.println("=======================================================\n");
         } catch (Exception e) {
 
         }
@@ -408,11 +418,13 @@ public class EventBusListener extends Thread {
     /*********************************************************************************************/
     
     synchronized void receivingMessage() {
+    	String pubIP=null;
+    	String topicName=null;
         try {
-            String topicName;                             
+        	System.out.println("=======================================================");                          
             List<Message> messageList;                    
             /////////////////////////////////////////////////////////////////////////////
-            String pubIP = conn.getInetAddress().getHostName();    //save the peer IP into pubIP
+            pubIP = conn.getInetAddress().getHostName();    //save the peer IP into pubIP
             ObjectInputStream in = null;
             //////////////////////////////////////////////////////////////
             while (conn.getInputStream().available() != -1) {
@@ -429,9 +441,9 @@ public class EventBusListener extends Thread {
                 //////////////////////////////////////////////////////////////
                 if (messageMarker instanceof Message) {				//make sure the message is a type of Message object
                     messageModel = (Message) messageMarker;
-                    String topicNameStr = messageModel.getTopicName();
-                    messageList = indexBus.get(topicNameStr);		//get the array list of the specified topic name
-                    Message m = new Message(messageList.size(), messageModel.getData(), topicNameStr);
+                    topicName = messageModel.getTopicName();
+                    messageList = indexBus.get(topicName);		//get the array list of the specified topic name
+                    Message m = new Message(messageList.size(), messageModel.getData(), topicName);
                     m.setDurable(messageModel.isDurable());			//set the message durability
                     m.setExpirationDate(messageModel.getExpirationDate());//set expiration date based on the publisher date	
                     m.setCreatedOn(messageModel.getCreatedOn());
@@ -440,23 +452,25 @@ public class EventBusListener extends Thread {
                         messageList.add(m);
                     }
                     //////////////////////////////////////////////////////////////
-                    indexBus.put(topicNameStr, messageList);		//add the message to the main eventbus
+                    indexBus.put(topicName, messageList);		//add the message to the main eventbus
                     if (m.isDurable())  							//only durable messaged gets persisted
                     {
-                        durableIndexBus.put(topicNameStr, messageList);
+                        durableIndexBus.put(topicName, messageList);
                     }
-                    System.out.println("Added new message  " + messageModel.getData() + " in topic " + topicNameStr);
+                    System.out.println("Added new message  " + messageModel.getData() + " in topic '" + topicName+"' by "+pubIP+".");
                 } else {
-                    System.out.println("Invalid object passed . returning....");
+                    System.out.println("Invalid object passed . returning.... !");
                 }
                 /////////////////////////////////////////////////////////////////////////////
             }
             in.close();                                         	//close reader
             conn.close();                                       	//close connection
+            System.out.println("=======================================================\n");
         }
         /////////////////////////////////////////////////////////////////////////////
         catch (EOFException eof) {
-            System.out.println("finished publishing topics");
+            System.out.println("Finished receiving messages from "+pubIP+" in topic '"+topicName+"'.");
+            System.out.println("=======================================================\n");
         } catch (UnknownHostException unknownHost) {                 //To Handle Unknown Host Exception
             System.err.println("host not available..!");
         } catch (IOException ioException) {                          //To Handle Input-Output Exception
@@ -465,8 +479,11 @@ public class EventBusListener extends Thread {
             e.printStackTrace();
             System.out.println(e.toString());
         } finally {
-            System.out.println("\nType the action number as following:");
-            System.out.println("1. To exit.\n");
+        	
+        	System.out.println("=======================================================");
+            System.out.println("Type the action number as following:");
+            System.out.println("1. To exit.");
+            System.out.println("=======================================================\n");
             Thread.currentThread().stop();
         }
     }
@@ -475,6 +492,7 @@ public class EventBusListener extends Thread {
     
     public synchronized void getMessagesBasedOnTime() {
         try {
+        	System.out.println("=======================================================");
             String receivedMessage, topicName;
             Message message;
             ObjectOutputStream out;
@@ -497,7 +515,7 @@ public class EventBusListener extends Thread {
                         if (indexBus.containsKey(topicName)) {
                             subscriberMessage = EventBusListener.indexBus.get(topicName); //get the required topic array list
                             long startTime=System.nanoTime();
-                            System.out.println("Sequential serch started in the eventbus\n");
+                            System.out.println("Sequential serch started in the eventbus..");
                             boolean flag=false;
                             for (int i = 0; i < subscriberMessage.size(); i++) {
                                 message = subscriberMessage.get(i);
@@ -512,14 +530,15 @@ public class EventBusListener extends Thread {
                                 }
                             }
                             long duration=System.nanoTime()-startTime;
-                            System.out.println("Sequential serch in the eventbus has been ended in: "+duration+" nsec\n");
-                            System.out.println("\nMessages sent for topic (" + topicName + ") to subscriber " + subIP + "..!\n");
+                            System.out.println("Sequential serch in the eventbus has been ended in: "+duration+" nsec.");
+                            System.out.println("Messages sent for topic (" + topicName + ") to subscriber " + subIP + "..!");
                         } else {
-                            System.out.println("\nNo messages retrieved for topic (" + topicName + ")..!\n");
+                            System.out.println("\nNo messages retrieved for topic (" + topicName + ")..!");
                         }
                     }
                 }
                     System.out.println("Subscriber " + subIP + " has been disconnected..!");
+                    System.out.println("=======================================================\n");
                 }
             }
             conn.close();

@@ -39,15 +39,16 @@ public class Main extends Thread {
     
     public static void main(String[] args) throws IOException {
 
-        System.out.println("=======================================================\n");
-        System.out.println("Preparing Event Bus server..........\n");
+        System.out.println("=======================================================");
+        System.out.println("Preparing Event Bus server..........");
         EventBusListener.prepareEventBus(); 											// recover durable topics and message from disk
-        System.out.println("Event Bus is up and running..........\n");
-        /////////////////////////////////////////////////////////////////////////////
+        System.out.println("Event Bus is up and running..........");
         System.out.println("=======================================================\n");
-        System.out.println("Retrieving subscribers list..........\n");
+        /////////////////////////////////////////////////////////////////////////////
+        System.out.println("=======================================================");
+        System.out.println("Retrieving subscribers list..........");
         EventBusListener.prepareSubscriptionList(); 									// recover subscribers list from disk
-        System.out.println("Subscribers list is up and running..........\n");
+        System.out.println("Subscribers list is up and running..........");
         System.out.println("=======================================================\n");
         /////////////////////////////////////////////////////////////////////////////
         executor = (ThreadPoolExecutor) Executors.newCachedThreadPool();				//thread management pool
@@ -71,14 +72,18 @@ public class Main extends Thread {
         t6.start();																		//Start thread
         /////////////////////////////////////////////////////////////////////////////
         while (true) {
+        		System.out.println("=======================================================");
             System.out.println("Type the action number as following:");
-            System.out.println("1. To exit.\n");
+            System.out.println("1. To exit.");
+            System.out.println("=======================================================\n");
             /////////////////////////////////////////////////////////////////////////////
             Scanner in = new Scanner(System.in);
             String userInput = in.nextLine().trim();
             if (userInput.equals("1"))                         							//if user entered 1
             {
+            		System.out.println("=======================================================");
                 System.out.println("Exiting...");
+                System.out.println("=======================================================\n");
                 System.exit(0);                         								//exit the program
             }
         }
@@ -93,7 +98,7 @@ public class Main extends Thread {
             executor.execute(listener);		
         } else {
             try {
-                System.out.println("PORT " + port);
+                //System.out.println("PORT " + port);
                 ServerSocket ssock = new ServerSocket(port); 							// create a socket for both search or register listeners
                 while (true) {                                 							//keep listening for peers
                     Socket sock = null;
@@ -102,7 +107,7 @@ public class Main extends Thread {
                     executor.execute(listener);											// create new thread
                 }
             } catch (UnknownHostException unknownHost) {                                //To Handle Unknown Host Exception
-                System.err.println("host not available..!");
+                System.err.println("host not available..!\n");
             } catch (IOException e) {                          							//catch the I/O errors
                 e.printStackTrace();
             } catch (Exception e) {                          							//catch the general errors
