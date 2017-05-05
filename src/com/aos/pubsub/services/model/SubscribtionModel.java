@@ -12,7 +12,6 @@ public class SubscribtionModel implements Serializable,MessageMarker{
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 1L; 
 	private String topicName;											
 	List<Message> messageList;
 	long createdOn;
